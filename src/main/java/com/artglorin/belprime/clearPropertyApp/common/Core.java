@@ -37,6 +37,11 @@ public class Core implements Runnable {
     @Override
     public void run() {
         try {
+            try {
+                Thread.sleep(1000);
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
             Path cleanupDirectoryPath = Files.createDirectories(Paths.get(processed.getParent(), "cleanup"));
             Logger logger = (Logger) LogManager.getLogger("FileHandler: " + processed.getName());
             FileAppender fa = FileAppender.createAppender(cleanupDirectoryPath.toString() + File.separator + processed.getName() + ".log", "false", "false", "File", "true",
