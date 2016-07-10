@@ -107,15 +107,4 @@ public class Core implements Runnable {
         }
         return temp;
     }
-
-    private Properties loadProperties(File template) {
-        final Properties properties = new Properties();
-        try (InputStreamReader inputStream = new InputStreamReader(new FileInputStream(template), "Windows-1251")) {
-            properties.load(inputStream);
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-        return properties;
-    }
-
 }
