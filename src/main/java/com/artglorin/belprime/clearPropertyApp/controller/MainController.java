@@ -3,17 +3,23 @@ package com.artglorin.belprime.clearPropertyApp.controller;
 import com.artglorin.belprime.clearPropertyApp.common.Core;
 import com.artglorin.belprime.clearPropertyApp.utils.FileUtil;
 import javafx.application.Platform;
-import javafx.beans.property.IntegerProperty;
+import javafx.beans.property.FloatProperty;
 import javafx.beans.property.ObjectProperty;
-import javafx.beans.property.SimpleIntegerProperty;
+import javafx.beans.property.SimpleFloatProperty;
 import javafx.beans.property.SimpleObjectProperty;
 import javafx.fxml.FXML;
-import javafx.scene.control.Alert;
+import javafx.scene.Scene;
 import javafx.scene.control.Button;
 import javafx.scene.control.ComboBox;
 import javafx.scene.control.Label;
 import javafx.scene.control.ListCell;
 import javafx.scene.control.ListView;
+import javafx.scene.control.ProgressIndicator;
+import javafx.scene.layout.Background;
+import javafx.scene.layout.BorderPane;
+import javafx.stage.Modality;
+import javafx.stage.Stage;
+import javafx.stage.StageStyle;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import rx.Observable;
@@ -158,28 +164,36 @@ public class MainController {
         if (lockButtons) {
             return;
         }
+
         lockButtons = true;
-        Alert alert = new Alert(Alert.AlertType.INFORMATION);
-        alert.setTitle("Началась обработка");
-        alert.setHeaderText(null);
-        alert.show();
-        final Properties properties = loadProperties(template.getValue(), templateEncoding.getValue());
+        final ProgressIndicator  progressBar = new ProgressIndicator(-1);
+
+        final BorderPane borderPane = new BorderPane();
+        borderPane.setCenter(progressBar);
+        borderPane.backgroundProperty().setValue(Background.EMPTY);
+        Stage stage = new Stage(StageStyle.TRANSPARENT);
+        final Scene scene = new Scene(borderPane, 200, 200);
+        stage.setScene(scene);
+        stage.initModality(Modality.APPLICATION_MODAL);
+        stage.show();
+        final float increment = 1f / processedList.getItems().size();
+        final Properties progress = loadProperties(template.getValue(), templateEncoding.getValue());
         final Charset value = processListEncoding.getValue();
-        IntegerProperty property = new SimpleIntegerProperty(processedList.getItems().size());
+        FloatProperty property = new SimpleFloatProperty(0);
         Observable.from(processedList.getItems())
                 .subscribeOn(new NewThreadScheduler(new RxThreadFactory("process")))
                 .doOnNext(file -> {
-                    property.setValue(property.subtract(1).get());
+                    property.setValue(property.add(increment).get());
                     Platform.runLater(() -> {
-                        alert.setContentText(property.getValue().toString());
+                        progressBar.setProgress(property.floatValue());
                     });
                 })
                 .doOnCompleted(() -> {
                     lockButtons = false;
-                    Platform.runLater(alert::close);
+                    Platform.runLater(stage::close);
                 })
                 .subscribe(file -> {
-                    new Core(properties, file, value).run();
+                    new Core(progress, file, value).run();
                 });
     }
 
