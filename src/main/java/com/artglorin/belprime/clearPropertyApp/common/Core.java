@@ -17,6 +17,8 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Properties;
 import java.util.Scanner;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 /**
  * Created by V.Verminsky on 10.07.2016.
@@ -24,7 +26,7 @@ import java.util.Scanner;
 public class Core implements Runnable {
 
     private final Properties properties;
-
+    private static final Pattern pattern = Pattern.compile("\\\\+$");
     private final File processed;
     private final Charset charset;
 
@@ -79,10 +81,13 @@ public class Core implements Runnable {
     }
 
     private boolean writeLine(OutputStreamWriter writer, String line, Logger logger) throws IOException {
-        boolean nextLineWriteAsIs;
+        boolean nextLineWriteAsIs = false;
         logger.info("Write line: {}", line);
         writer.write(line + System.lineSeparator());
-        nextLineWriteAsIs = line.endsWith("\\") && !line.endsWith("\\\\");
+        final Matcher matcher = pattern.matcher(line);
+        if (matcher.find()) {
+            nextLineWriteAsIs = matcher.group().length() % 2 != 0;
+        }
         return nextLineWriteAsIs;
     }
 
