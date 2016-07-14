@@ -1,7 +1,6 @@
 package com.artglorin.belprime.clearPropertyApp.controller;
 
 import com.artglorin.belprime.clearPropertyApp.common.Core;
-import com.artglorin.belprime.clearPropertyApp.utils.FileUtil;
 import javafx.application.Platform;
 import javafx.beans.property.FloatProperty;
 import javafx.beans.property.ObjectProperty;
@@ -33,6 +32,9 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Properties;
+
+import static com.artglorin.javaFxUtil.JavaFxFileDialogUtil.openDialog;
+import static com.artglorin.javaFxUtil.JavaFxFileDialogUtil.openMultiplyDialog;
 
 /**
  * Created by V.Verminsky on 06.07.2016.
@@ -131,7 +133,7 @@ public class MainController {
         if (lockButtons) {
             return;
         }
-        final File file = FileUtil.openDialog("Property files", "*.properties");
+        final File file = openDialog("Property files", "*.properties");
         if (file != null) {
             template.setValue(file);
             templateLabel.setText("Образец файла свойств: " + template.getValue().getName());
@@ -143,7 +145,7 @@ public class MainController {
         if (lockButtons) {
             return;
         }
-        List<File> files = FileUtil.openMultiplyDialog("Property files", "*.properties");
+        List<File> files = openMultiplyDialog("Property files", "*.properties");
         if (files != null) {
             processedList.getItems().clear();
             if (files.contains(template.getValue())){
@@ -180,9 +182,7 @@ public class MainController {
                 .subscribeOn(new NewThreadScheduler(new RxThreadFactory("process")))
                 .doOnNext(file -> {
                     property.setValue(property.add(increment).get());
-                    Platform.runLater(() -> {
-                        progressBar.setProgress(property.floatValue());
-                    });
+                    Platform.runLater(() -> progressBar.setProgress(property.floatValue()));
                 })
                 .doOnCompleted(() -> {
                     lockButtons = false;

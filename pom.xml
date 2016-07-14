@@ -26,5 +26,10 @@
             <artifactId>rxjava</artifactId>
             <version>1.1.6</version>
         </dependency>
+        <dependency>
+            <groupId>com.artglorin</groupId>
+            <artifactId>JavaFxUtil</artifactId>
+            <version>1.1-SNAPSHOT</version>
+        </dependency>
     </dependencies>
 </project>
