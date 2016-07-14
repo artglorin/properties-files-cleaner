@@ -7,6 +7,7 @@ import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.SimpleFloatProperty;
 import javafx.beans.property.SimpleObjectProperty;
 import javafx.fxml.FXML;
+import javafx.fxml.FXMLLoader;
 import javafx.scene.Scene;
 import javafx.scene.control.Button;
 import javafx.scene.control.ComboBox;
@@ -14,11 +15,11 @@ import javafx.scene.control.Label;
 import javafx.scene.control.ListCell;
 import javafx.scene.control.ListView;
 import javafx.scene.control.ProgressIndicator;
-import javafx.scene.layout.Background;
-import javafx.scene.layout.BorderPane;
+import javafx.scene.layout.GridPane;
 import javafx.stage.Modality;
 import javafx.stage.Stage;
 import javafx.stage.StageStyle;
+import javafx.stage.Window;
 import rx.Observable;
 import rx.internal.schedulers.NewThreadScheduler;
 import rx.internal.util.RxThreadFactory;
@@ -133,11 +134,13 @@ public class MainController {
         if (lockButtons) {
             return;
         }
+        lockButtons = true;
         final File file = openDialog("Property files", "*.properties");
         if (file != null) {
             template.setValue(file);
             templateLabel.setText("Образец файла свойств: " + template.getValue().getName());
         }
+        lockButtons = false;
     }
 
     @FXML
@@ -145,6 +148,7 @@ public class MainController {
         if (lockButtons) {
             return;
         }
+        lockButtons = true;
         List<File> files = openMultiplyDialog("Property files", "*.properties");
         if (files != null) {
             processedList.getItems().clear();
@@ -155,24 +159,27 @@ public class MainController {
             processedList.getItems().addAll(files);
             processButton.disableProperty().setValue(false);
         }
+        lockButtons = false;
     }
 
     @FXML
-    private void process() {
+    private void process() throws IOException {
         if (lockButtons) {
             return;
         }
-
         lockButtons = true;
-        final ProgressIndicator  progressBar = new ProgressIndicator(-1);
-
-        final BorderPane borderPane = new BorderPane();
-        borderPane.setCenter(progressBar);
-        borderPane.backgroundProperty().setValue(Background.EMPTY);
+        final GridPane pane;
+        ProgressIndicator  progressBar;
+        //noinspection ConstantConditions
+        pane = FXMLLoader.load(getClass().getClassLoader().getResource("fxml/progress.fxml"));
+        progressBar = (ProgressIndicator) pane.lookup("#pid");
+        final Scene scene = new Scene(pane, 200, 200);
         Stage stage = new Stage(StageStyle.TRANSPARENT);
-        final Scene scene = new Scene(borderPane, 200, 200);
         stage.setScene(scene);
         stage.initModality(Modality.APPLICATION_MODAL);
+        final Window owner = processButton.getScene().getWindow();
+        stage.setX(owner.getX() + owner.getWidth() / 2 - scene.getWidth() / 2);
+        stage.setY(owner.getY() + owner.getHeight() / 2 - scene.getHeight() / 2);
         stage.show();
         final float increment = 1f / processedList.getItems().size();
         final Properties progress = loadProperties(template.getValue(), templateEncoding.getValue());
@@ -193,12 +200,10 @@ public class MainController {
                 });
     }
 
-    private static Properties loadProperties(File template, Charset charset) {
+    private static Properties loadProperties(File template, Charset charset) throws IOException {
         final Properties properties = new Properties();
         try (InputStreamReader inputStream = new InputStreamReader(new FileInputStream(template), charset)) {
             properties.load(inputStream);
-        } catch (IOException e) {
-            e.printStackTrace();
         }
         return properties;
     }
