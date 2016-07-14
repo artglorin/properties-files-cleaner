@@ -1,10 +1,5 @@
 package com.artglorin.belprime.clearPropertyApp.common;
 
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.core.Logger;
-import org.apache.logging.log4j.core.appender.FileAppender;
-import org.apache.logging.log4j.core.layout.PatternLayout;
-
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
@@ -40,49 +35,32 @@ public class Core implements Runnable {
     public void run() {
         try {
             Path cleanupDirectoryPath = Files.createDirectories(Paths.get(processed.getParent(), "cleanup"));
-            Logger logger = (Logger) LogManager.getLogger("FileHandler: " + processed.getName());
-            FileAppender fa = FileAppender.createAppender(cleanupDirectoryPath.toString() + File.separator + processed.getName() + ".log", "false", "false", "File", "true",
-                    "false", "false", "4000", PatternLayout.createDefaultLayout(), null, "false", null, null);
-            logger.addAppender(fa);
-            fa.start();
-
-
-            final File tempFile = createTempFile(processed);
+            final Path writeFile = Paths.get(cleanupDirectoryPath.toString(), processed.getName());
+            final Path deleteFile = Paths.get(cleanupDirectoryPath.toString(), processed.getName() +".deletedStrings");
             try (Scanner scanner = new Scanner(new InputStreamReader(new FileInputStream(processed), charset));
-                 OutputStreamWriter writer = new OutputStreamWriter(new FileOutputStream(tempFile), charset)) {
+                 OutputStreamWriter writer = new OutputStreamWriter(new FileOutputStream(writeFile.toFile()), charset);
+                OutputStreamWriter deleted = new OutputStreamWriter(new FileOutputStream(deleteFile.toFile()), charset)) {
                 boolean nextLineWriteAsIs = false;
                 while (scanner.hasNextLine()) {
                     String line = scanner.nextLine();
                     if (nextLineWriteAsIs) {
-                        nextLineWriteAsIs = writeLine(writer, line, logger);
+                        nextLineWriteAsIs = writeLine(writer, line);
                         continue;
                     }
                     if (isNeedWriteString(line)) {
-                        nextLineWriteAsIs = writeLine(writer, line, logger);
+                        nextLineWriteAsIs = writeLine(writer, line);
                     } else {
-                        logger.error("Delete line: {}", line);
+                        deleted.write(line + System.lineSeparator());
                     }
                 }
-            } catch (IOException e) {
-                logger.error(e);
-            }
-            try {
-                final Path file = Paths.get(cleanupDirectoryPath.toString(), processed.getName());
-                Files.deleteIfExists(file);
-                Files.copy(tempFile.toPath(), file);
-                Files.deleteIfExists(tempFile.toPath());
-            } catch (IOException e) {
-                logger.error(e);
             }
         } catch (IOException e) {
             e.printStackTrace();
         }
-
     }
 
-    private boolean writeLine(OutputStreamWriter writer, String line, Logger logger) throws IOException {
+    private boolean writeLine(OutputStreamWriter writer, String line) throws IOException {
         boolean nextLineWriteAsIs = false;
-        logger.info("Write line: {}", line);
         writer.write(line + System.lineSeparator());
         final Matcher matcher = pattern.matcher(line);
         if (matcher.find()) {
@@ -100,16 +78,5 @@ public class Core implements Runnable {
 
     public String getKey(String line) {
         return line.substring(0, line.indexOf("="));
-    }
-
-
-    private File createTempFile(File file) {
-        File temp = null;
-        try {
-            temp = File.createTempFile(file.getName(), ".tmp");
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-        return temp;
     }
 }

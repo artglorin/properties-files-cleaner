@@ -20,8 +20,6 @@ import javafx.scene.layout.BorderPane;
 import javafx.stage.Modality;
 import javafx.stage.Stage;
 import javafx.stage.StageStyle;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
 import rx.Observable;
 import rx.internal.schedulers.NewThreadScheduler;
 import rx.internal.util.RxThreadFactory;
@@ -40,7 +38,6 @@ import java.util.Properties;
  * Created by V.Verminsky on 06.07.2016.
  */
 public class MainController {
-    private static final Logger logger = LogManager.getLogger(MainController.class);
 
     private ObjectProperty<File> template = new SimpleObjectProperty<>();
 
@@ -152,7 +149,6 @@ public class MainController {
             if (files.contains(template.getValue())){
                 files = new ArrayList<>(files);
                 files.remove(template.getValue());
-                logger.info("remove from list template file: " + template.getName());
             }
             processedList.getItems().addAll(files);
             processButton.disableProperty().setValue(false);
