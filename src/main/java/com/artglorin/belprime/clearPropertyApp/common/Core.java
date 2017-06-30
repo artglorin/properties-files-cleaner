@@ -20,26 +20,26 @@ import java.util.regex.Pattern;
  */
 public class Core implements Runnable {
 
-    private final Properties properties;
+    private final Properties templateProperties;
     private static final Pattern pattern = Pattern.compile("\\\\+$");
-    private final File processed;
+    private final File outputFile;
     private final Charset charset;
 
-    public Core(Properties properties, File processed, Charset charset) {
-        this.properties = properties;
-        this.processed = processed;
+    public Core(Properties templateProperties, File outputFile, Charset charset) {
+        this.templateProperties = templateProperties;
+        this.outputFile = outputFile;
         this.charset = charset;
     }
 
     @Override
     public void run() {
         try {
-            Path cleanupDirectoryPath = Files.createDirectories(Paths.get(processed.getParent(), "cleanup"));
-            final Path writeFile = Paths.get(cleanupDirectoryPath.toString(), processed.getName());
-            final Path deleteFile = Paths.get(cleanupDirectoryPath.toString(), processed.getName() +".deletedStrings");
-            try (Scanner scanner = new Scanner(new InputStreamReader(new FileInputStream(processed), charset));
+            Path cleanupDirectoryPath = getOutputDirectory(outputFile.getParent());
+            final Path writeFile = Paths.get(cleanupDirectoryPath.toString(), outputFile.getName());
+            final Path deleteFile = Paths.get(cleanupDirectoryPath.toString(), outputFile.getName() +".deletedStrings");
+            try (Scanner scanner = new Scanner(new InputStreamReader(new FileInputStream(outputFile), charset));
                  OutputStreamWriter writer = new OutputStreamWriter(new FileOutputStream(writeFile.toFile()), charset);
-                OutputStreamWriter deleted = new OutputStreamWriter(new FileOutputStream(deleteFile.toFile()), charset)) {
+                 OutputStreamWriter deleted = new OutputStreamWriter(new FileOutputStream(deleteFile.toFile()), charset)) {
                 boolean nextLineWriteAsIs = false;
                 while (scanner.hasNextLine()) {
                     String line = scanner.nextLine();
@@ -59,6 +59,10 @@ public class Core implements Runnable {
         }
     }
 
+    public static Path getOutputDirectory(String templatePath) throws IOException {
+        return Files.createDirectories(Paths.get(templatePath, "cleanup"));
+    }
+
     private boolean writeLine(OutputStreamWriter writer, String line) throws IOException {
         boolean nextLineWriteAsIs = false;
         writer.write(line + System.lineSeparator());
@@ -72,11 +76,11 @@ public class Core implements Runnable {
 
     private boolean isNeedWriteString(String string) {
         string = string.trim();
-        return string.isEmpty() || string.startsWith("#") || (string.contains("=") && properties.containsKey(getKey(string)));
+        return string.isEmpty() || string.startsWith("#") || (string.contains("=") && templateProperties.containsKey(getKey(string)));
 
     }
 
-    public String getKey(String line) {
+    private String getKey(String line) {
         return line.substring(0, line.indexOf("="));
     }
 }
