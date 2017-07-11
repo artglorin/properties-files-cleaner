@@ -69,6 +69,10 @@ public class MainController {
 
     private boolean lockButtons;
 
+    public ListView<File> getList() {
+        return processedList;
+    }
+
     @FXML
     private void initialize() {
         processedList.setCellFactory(param -> new ListCell<File>(){
