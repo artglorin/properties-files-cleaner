@@ -5,15 +5,22 @@ import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.io.OutputStream;
 import java.io.OutputStreamWriter;
 import java.nio.charset.Charset;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Properties;
 import java.util.Scanner;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+
+import static com.artglorin.belprime.clearPropertyApp.common.Util.getOutputDirectory;
+import static com.artglorin.belprime.clearPropertyApp.common.Util.loadProperties;
+import static com.artglorin.belprime.clearPropertyApp.common.Util.storeProperties;
 
 /**
  * Created by V.Verminsky on 10.07.2016.
@@ -21,66 +28,36 @@ import java.util.regex.Pattern;
 public class Core implements Runnable {
 
     private final Properties templateProperties;
-    private static final Pattern pattern = Pattern.compile("\\\\+$");
-    private final File outputFile;
+    private final File fileWithProcessedProperties;
     private final Charset charset;
 
-    public Core(Properties templateProperties, File outputFile, Charset charset) {
+    public Core(Properties templateProperties, File fileWithProcessedProperties, Charset charset) {
         this.templateProperties = templateProperties;
-        this.outputFile = outputFile;
+        this.fileWithProcessedProperties = fileWithProcessedProperties;
         this.charset = charset;
     }
 
     @Override
     public void run() {
         try {
-            Path cleanupDirectoryPath = getOutputDirectory(outputFile.getParent());
-            final Path writeFile = Paths.get(cleanupDirectoryPath.toString(), outputFile.getName());
-            final Path deleteFile = Paths.get(cleanupDirectoryPath.toString(), outputFile.getName() +".deletedStrings");
-            try (Scanner scanner = new Scanner(new InputStreamReader(new FileInputStream(outputFile), charset));
-                 OutputStreamWriter writer = new OutputStreamWriter(new FileOutputStream(writeFile.toFile()), charset);
-                 OutputStreamWriter deleted = new OutputStreamWriter(new FileOutputStream(deleteFile.toFile()), charset)) {
-                boolean nextLineWriteAsIs = false;
-                while (scanner.hasNextLine()) {
-                    String line = scanner.nextLine();
-                    if (nextLineWriteAsIs) {
-                        nextLineWriteAsIs = writeLine(writer, line);
-                        continue;
-                    }
-                    if (isNeedWriteString(line)) {
-                        nextLineWriteAsIs = writeLine(writer, line);
-                    } else {
-                        deleted.write(line + System.lineSeparator());
-                    }
+            Path cleanupDirectoryPath = getOutputDirectory(fileWithProcessedProperties.getParent());
+            final Properties cleaningProperties = loadProperties(fileWithProcessedProperties.toPath(), charset);
+            final Properties deletedProperties = new Properties();
+            final Path resultOutputFile = Paths.get(cleanupDirectoryPath.toString(), fileWithProcessedProperties.getName());
+            final Path forDeletedPropertiesFile = Paths.get(cleanupDirectoryPath.toString(), fileWithProcessedProperties.getName() +".deletedStrings");
+            if(cleaningProperties.entrySet().removeIf(entry -> {
+                final Object value = templateProperties.get(entry.getKey());
+                final boolean remove = value == null || entry.getValue().equals(value);
+                if (remove) {
+                    deletedProperties.put(entry.getKey(), entry.getValue());
                 }
+                return remove;
+            })) {
+                storeProperties(deletedProperties, forDeletedPropertiesFile);
             }
+            storeProperties(cleaningProperties, resultOutputFile);
         } catch (IOException e) {
             e.printStackTrace();
         }
-    }
-
-    public static Path getOutputDirectory(String templatePath) throws IOException {
-        return Files.createDirectories(Paths.get(templatePath, "cleanup"));
-    }
-
-    private boolean writeLine(OutputStreamWriter writer, String line) throws IOException {
-        boolean nextLineWriteAsIs = false;
-        writer.write(line + System.lineSeparator());
-        final Matcher matcher = pattern.matcher(line);
-        if (matcher.find()) {
-            nextLineWriteAsIs = matcher.group().length() % 2 != 0;
-        }
-        return nextLineWriteAsIs;
-    }
-
-
-    private boolean isNeedWriteString(String string) {
-        string = string.trim();
-        return string.isEmpty() || string.startsWith("#") || (string.contains("=") && templateProperties.containsKey(getKey(string)));
-
-    }
-
-    private String getKey(String line) {
-        return line.substring(0, line.indexOf("="));
     }
 }

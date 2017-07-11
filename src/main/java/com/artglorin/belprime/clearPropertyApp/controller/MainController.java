@@ -1,8 +1,8 @@
 package com.artglorin.belprime.clearPropertyApp.controller;
 
 import com.artglorin.belprime.clearPropertyApp.common.Core;
+import com.artglorin.belprime.clearPropertyApp.common.Util;
 import javafx.application.Platform;
-import javafx.beans.property.FloatProperty;
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.SimpleFloatProperty;
 import javafx.beans.property.SimpleObjectProperty;
@@ -25,18 +25,19 @@ import rx.internal.schedulers.NewThreadScheduler;
 import rx.internal.util.RxThreadFactory;
 
 import java.io.File;
-import java.io.FileInputStream;
 import java.io.IOException;
-import java.io.InputStreamReader;
 import java.nio.charset.Charset;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.Properties;
+import java.util.stream.Collectors;
 
+import static com.artglorin.belprime.clearPropertyApp.common.Util.loadProperties;
 import static com.artglorin.javaFxUtil.JfxFileDialogUtil.openDialog;
 import static com.artglorin.javaFxUtil.JfxFileDialogUtil.openMultiplyDialog;
 
@@ -197,36 +198,43 @@ public class MainController {
         stage.setY(owner.getY() + owner.getHeight() / 2 - scene.getHeight() / 2);
         stage.show();
         final float increment = 1f / processedList.getItems().size();
-        final Properties templatePropertyFile = loadProperties(template.getValue(), templateEncoding.getValue());
-        final Charset value = processListEncoding.getValue();
-        FloatProperty progressPercent = new SimpleFloatProperty(0);
-        Observable.from(processedList.getItems())
-                .subscribeOn(new NewThreadScheduler(new RxThreadFactory("process")))
-                .doOnNext(file -> {
-                    progressPercent.setValue(progressPercent.add(increment).get());
-                    Platform.runLater(() -> progressBar.setProgress(progressPercent.floatValue()));
-                })
-                .doOnCompleted(() -> {
-                    lockButtons = false;
-                    Platform.runLater(stage::close);
-                })
-                .doOnTerminate(() -> {
-                    try {
-                        Files.copy(template.getValue().toPath(),
-                                   Paths.get(Core.getOutputDirectory(template.getValue().getParent()).toString(), template.getValue().getName()));
-                    } catch (IOException e) {
-                        e.printStackTrace();
-                    }
-                })
-                .subscribe(file -> new Core(templatePropertyFile, file, value).run());
+        try {
+            doStuff(progressBar, stage, increment, loadProperties(template.getValue().toPath(), templateEncoding.getValue()),
+                    processListEncoding.getValue());
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
     }
 
-    private static Properties loadProperties(File template, Charset charset) throws IOException {
-        final Properties properties = new Properties();
-        try (InputStreamReader inputStream = new InputStreamReader(new FileInputStream(template), charset)) {
-            properties.load(inputStream);
-        }
-        return properties;
+    private void doStuff(ProgressIndicator progressBar,
+                         Stage stage,
+                         float increment,
+                         Properties templatePropertyFile,
+                         Charset value) {
+        final SimpleFloatProperty progressPercent = new SimpleFloatProperty(0);
+        Observable.from(processedList.getItems())
+                  .subscribeOn(new NewThreadScheduler(new RxThreadFactory("process")))
+                  .doOnNext(file -> {
+                      progressPercent.setValue(progressPercent.add(increment).get());
+                      Platform.runLater(() -> progressBar.setProgress(progressPercent.floatValue()));
+                  })
+                  .doOnCompleted(() -> {
+                      lockButtons = false;
+                      Platform.runLater(stage::close);
+                  })
+                  .doOnTerminate(() -> {
+                      try {
+                          Files.copy(template.getValue().toPath(),
+                                     Paths.get(Util.getOutputDirectory(template.getValue().getParent()).toString(), template.getValue().getName()));
+                      } catch (IOException e) {
+                          e.printStackTrace();
+                      }
+                  })
+                  .subscribe(file -> {
+                      final Properties threadInstance = new Properties();
+                      threadInstance.putAll(templatePropertyFile.entrySet().stream().collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue)));
+                      new Core(threadInstance, file, value).run();
+                  });
     }
 
 }
