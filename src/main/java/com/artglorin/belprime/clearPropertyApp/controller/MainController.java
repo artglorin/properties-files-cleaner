@@ -34,6 +34,7 @@ import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Optional;
 import java.util.Properties;
 
 import static com.artglorin.javaFxUtil.JfxFileDialogUtil.openDialog;
@@ -44,6 +45,7 @@ import static com.artglorin.javaFxUtil.JfxFileDialogUtil.openMultiplyDialog;
  */
 public class MainController {
 
+    private static final String PROPERTY_EXTENSION = ".properties";
     private ObjectProperty<File> template = new SimpleObjectProperty<>();
 
     @FXML
@@ -65,7 +67,6 @@ public class MainController {
     private Label templateLabel;
 
     private boolean lockButtons;
-
 
     @FXML
     private void initialize() {
@@ -137,10 +138,18 @@ public class MainController {
             return;
         }
         lockButtons = true;
-        final File file = openDialog("Property files", "*.properties");
+        final File file = openDialog("Property files", "*" + PROPERTY_EXTENSION);
         if (file != null) {
             template.setValue(file);
             templateLabel.setText("Образец файла свойств: " + template.getValue().getName());
+            final String templateName = file.getName();
+            final int startExtensionIndex = templateName.lastIndexOf(PROPERTY_EXTENSION);
+            if (startExtensionIndex > 0) {
+                final String propertyName = templateName.substring(0, startExtensionIndex);
+                Optional.ofNullable(file.getParentFile().listFiles((dir, name) -> name.startsWith(propertyName + "_") && name.endsWith(PROPERTY_EXTENSION)))
+                        .map(Arrays::asList).ifPresent(this::loadFilesToProcess);
+            }
+
         }
         lockButtons = false;
     }
@@ -151,7 +160,12 @@ public class MainController {
             return;
         }
         lockButtons = true;
-        List<File> files = openMultiplyDialog("Property files", "*.properties");
+        List<File> files = openMultiplyDialog("Property files", "*" + PROPERTY_EXTENSION);
+        loadFilesToProcess(files);
+        lockButtons = false;
+    }
+
+    private void loadFilesToProcess(List<File> files) {
         if (files != null) {
             processedList.getItems().clear();
             if (files.contains(template.getValue())){
@@ -161,7 +175,6 @@ public class MainController {
             processedList.getItems().addAll(files);
             processButton.disableProperty().setValue(false);
         }
-        lockButtons = false;
     }
 
     @FXML
