@@ -1,12 +1,13 @@
 package com.artglorin.belprime.clearPropertyApp.common;
 
-import java.io.File;
+import java.io.BufferedWriter;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
-import java.io.OutputStream;
+import java.io.OutputStreamWriter;
+import java.io.Writer;
 import java.nio.charset.Charset;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -22,8 +23,8 @@ public class Util {
     private Util() {
     }
 
-    public static void storeProperties(Properties properties, Path path) throws IOException {
-        try (OutputStream outputStream = new FileOutputStream(path.toFile())) {
+    public static void storeProperties(Properties properties, Path path, Charset utf8) throws IOException {
+        try (Writer outputStream = new BufferedWriter(new OutputStreamWriter(new FileOutputStream(path.toFile()), utf8))) {
             properties.store(outputStream, "");
         }
     }

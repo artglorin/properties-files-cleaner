@@ -1,22 +1,11 @@
 package com.artglorin.belprime.clearPropertyApp.common;
 
 import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileOutputStream;
 import java.io.IOException;
-import java.io.InputStreamReader;
-import java.io.OutputStream;
-import java.io.OutputStreamWriter;
 import java.nio.charset.Charset;
-import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.util.HashMap;
-import java.util.Map;
 import java.util.Properties;
-import java.util.Scanner;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 
 import static com.artglorin.belprime.clearPropertyApp.common.Util.getOutputDirectory;
 import static com.artglorin.belprime.clearPropertyApp.common.Util.loadProperties;
@@ -53,9 +42,9 @@ public class Core implements Runnable {
                 }
                 return remove;
             })) {
-                storeProperties(deletedProperties, forDeletedPropertiesFile);
+                storeProperties(deletedProperties, forDeletedPropertiesFile, charset);
             }
-            storeProperties(cleaningProperties, resultOutputFile);
+            storeProperties(cleaningProperties, resultOutputFile, charset);
         } catch (IOException e) {
             e.printStackTrace();
         }
