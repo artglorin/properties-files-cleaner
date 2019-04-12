@@ -19,6 +19,8 @@
             <groupId>com.artglorin</groupId>
             <artifactId>JavaFxUtil</artifactId>
             <version>0.0.2-SNAPSHOT</version>
+            <scope>system</scope>
+            <systemPath>${pom.basedir}/libs/JavaFxUtil-0.0.2-SNAPSHOT.jar</systemPath>
         </dependency>
     </dependencies>
 
